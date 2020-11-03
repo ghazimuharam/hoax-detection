@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+    
+    <title>Cek Narasi Hoax | Indonesia</title>
+</head>
+<body class="bg-indigo-300 bg-opacity-75">
+    <div class="flex items-center justify-center h-screen">
+    
+        <div class="container bg-white text-black rounded-lg border shadow-2xl w-full p-10">
+            <h1 class="text-2xl sm:text-3xl uppercase font-extrabold tracking-wider border-b-2">Cek narasi hoax</h1>
+            <div class="text-right font-bold">
+                <span>Muhammad Ghazi Muharam</span>
+            </div>
+            
+            <div class="text-lg font-normal text-justify tracking-wide py-5">
+                <p class="pb-3">Penyebaran informasi hoax menimbulkan keresahan. Untuk itu masyarakat perlu diingatkan agar memanfaatkan media sosial secara positif dan jangan mudah termakan isu tidak benar.</p> 
+                <p>Situs ini dapat mendeteksi narasi hoax dengan menggunakan AI(Artificial Intelligence). AI dilatih dengan Pre-trained model <span class="font-bold">IndoBERT</span>(Indonesia Bidirectional Encoder Representations from Transformers) by <span class="font-bold">IndoNLU</span> dan dilakukan Fine-Tuning terhadap Dataset narasi hoax. Anda dapat melakukan pengecekan dengan memasukkan narasi hoax ke dalam form input yang ada dibawah ini.</p>
+            </div>
+
+            <label for="text_narration" class="font-semibold tracking-wide">Narasi</label>
+            <input type="text" name="text_narration" id="text_narration" class="w-full p-2 border border-gray-900 rounded-md focus:outline-none" autocomplete="off" required>
+
+            <div x-data="predictFunction()">
+                <div class="py-5 flex justify-center items-center">
+                    <button @click="changeLoading()" class="transition duration-300 bg-white hover:bg-black hover:text-white text-gray-800 font-semibold py-2 px-4 border border-gray-900 rounded-md shadow">
+                        Submit
+                    </button>
+                </div>
+    
+                <div x-show.transition.opacity.duration.400ms="isLoading" id="loading-animation" class="py-5 flex flex-col justify-center items-center">
+                    <button type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-base leading-6 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:shadow-outline-indigo active:bg-indigo-700 transition ease-in-out duration-150 cursor-not-allowed" disabled="">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing
+                    </button>
+                </div>
+            </div>
+            <div x-if="!isLoading" class="py-5 flex flex-col justify-center items-center tracking-wide">
+                <div id="type-result" class="hidden">
+                    <span id="text-result" class="font-normal"></span>
+                </div>
+            </div>
+            <div>
+                <span class="text-red-500">*AI tidak melakukan pengecekan fakta berita, Hasil klasifikasi berita ditentukan dari cara penulisan.</span>
+            </div>
+        </div>
+      </div>
+      <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
+      <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+      <script>
+          function predictFunction() {
+              return {
+                isLoading: false,
+                changeLoading(){
+                    this.isLoading = !this.isLoading;
+                    this.make_prediction();
+                },
+                make_prediction() {
+                    setTimeout(() => {
+                        try {
+                        let text_narration = document.getElementById('text_narration').value;
+                        if(text_narration === ""){
+                            alert("Insert your text");
+                        }else{
+                            document.getElementById("type-result").className = "hidden";
+                            let textObj = {"text_narration": text_narration};
+
+                            (async () => {
+                                const response = await axios.post('/api/v1/predict', textObj);
+                                let json_resp = JSON.parse(JSON.stringify(response));
+                                let label = json_resp.data.prediction.predicted_label;
+                                let prob = json_resp.data.prediction.label[label];
+                                
+                                if (label == 0) {
+                                    document.getElementById("type-result").className = "w-full bg-green-600 bg-opacity-50 p-5";
+                                    document.getElementById("text-result").innerHTML = "<span class='font-bold'>Prediction : "+ (prob*100).toPrecision(4) + "% Bukan Hoax </span>" + "</br><span class='font-semibold'>Text :</span> " + text_narration;
+                                    document.getElementById("loading-animation").className = "hidden";
+                                }else if (label == 1) {
+                                    document.getElementById("type-result").className = "w-full bg-red-600 bg-opacity-50 p-5";
+                                    document.getElementById("text-result").innerHTML = "<span class='font-bold'>Prediction : "+ (prob*100).toPrecision(4) + "% Hoax </span>" + "</br><span class='font-semibold'>Text :</span> " + text_narration;
+                                    document.getElementById("loading-animation").className = "hidden";
+                                }
+                            })()
+                            }
+                        } catch (error) {
+                            console.log(error)
+                        }
+                    }, 500);
+                }
+              }
+          }
+      </script>
+</body>
+</html>
